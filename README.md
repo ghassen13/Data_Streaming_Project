@@ -6,6 +6,12 @@
 
 This project implements a Flink streaming job that processes exchange rate data using a sliding window operation. The job reads data from an AlphaVantageAPI source and applies a sliding window operation with a fixed window size of 10 seconds and a slide interval of 5 seconds. Within each window, the exchange rate data is multiplied by 2 and then aggregated using the reduce operation, which sums up the values in the window. The aggregated data is then printed to the console.
 
+# Objectif
+- Retrieve real-time Bitcoin-to-TND exchange rate data from the AlphVintage API.
+- Process the streaming data in real-time using Apache Flink for analytics and transformative operations.
+- Implement sliding window operations to detect related data.
+- Visualize the processed data dynamically through a line chart interface developed using JavaFX.
+
 # Requirements
 To run this project, you will need:
 
