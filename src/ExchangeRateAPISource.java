@@ -1,47 +1,26 @@
-import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.TimeCharacteristic;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-public class ExchangeRateAPISource implements SourceFunction<Double> {
-    private volatile boolean isRunning = true;
+public class ExchangeRateAPISource {
 
-    @Override
-    public void run(SourceContext<Double> ctx) throws Exception {
-        // Récupérer les données en temps réel depuis l'API de Binance
-        while (isRunning) {
-            // Utiliser l'API de Binance pour obtenir les données en temps réel
-            double btcUsdRate = getRealTimeData();
+    public static DataStream<Double> getResultStream() {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-            // Émettre les données récupérées dans le contexte de la source Flink
-            ctx.collect(btcUsdRate);
+        // Set the time characteristic to EventTime
+        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-            Thread.sleep(1000); // Attendre une seconde avant la prochaine émission
-        }
+        // Replace YOUR_RAPIDAPI_KEY and YOUR_RAPIDAPI_ENDPOINT with your actual RapidAPI key and endpoint
+        String rapidApiKey = "a87319b68cmsh175e9f86cb40e90p190f6cjsn8572d0df81a4";
+        String fromCurrency = "BTC";
+        String toCurrency = "TND";
+        String function = "CURRENCY_EXCHANGE_RATE";
+        String rapidApiEndpoint = "https://alpha-vantage.p.rapidapi.com/query?from_currency=" + fromCurrency + "&function=" + function + "&to_currency=" + toCurrency;
+        System.out.println("API Request URL: " + rapidApiEndpoint);
+
+        // Create a data stream by making an HTTP request to the RapidAPI endpoint
+        return env.addSource(new DataStreaming.AlphaVantageAPI(rapidApiKey, rapidApiEndpoint))
+                .assignTimestampsAndWatermarks(WatermarkStrategy.noWatermarks());
     }
-
-    @Override
-    public void cancel() {
-        isRunning = false;
-    }
-
-    // Méthode factice pour simuler la récupération des données de Binance
-    public double getRealTimeData() {
-        // Logique pour récupérer les données réelles de Binance
-        // Remplacez ceci par votre logique d'appel à l'API de Binance
-        return Math.random() * 10000; // Simuler un taux de change aléatoire pour l'exemple
-    }
-
-
-    public class MainApplication {
-        public void main(String[] args) throws Exception {
-            // Initialisation de l'environnement d'exécution Flink
-            StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-            // Ajouter la source Flink (BinanceAPISource)
-            env.addSource(new ExchangeRateAPISource())
-                    // Autres transformations ou opérations sur les données
-                    .print(); // Exemple : Affichage des données récupérées
-
-            // Exécuter le job de streaming
-            env.execute("Flink Job with Binance Source");
-        }
-    }}
+}

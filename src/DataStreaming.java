@@ -15,6 +15,7 @@ import java.net.URL;
 import java.time.Duration;
 
 public class DataStreaming {
+    public static DataStream<Double> resultStream;
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -31,7 +32,7 @@ public class DataStreaming {
         System.out.println("API Request URL: " + rapidApiEndpoint);
 
         // Create a data stream by making an HTTP request to the RapidAPI endpoint
-        DataStream<Double> resultStream = env.addSource(new AlphaVantageAPI(rapidApiKey, rapidApiEndpoint))
+        resultStream = env.addSource(new AlphaVantageAPI(rapidApiKey, rapidApiEndpoint))
                 .assignTimestampsAndWatermarks(WatermarkStrategy.noWatermarks());
 
         // Print the results to the console
@@ -42,6 +43,7 @@ public class DataStreaming {
                 .windowAll(SlidingProcessingTimeWindows.of(Time.seconds(10), Time.seconds(5)))
                 .apply(new SlidingWindowFunction());
 
+
         // Print the results of the sliding window to the console
         windowedStream.print();
 
@@ -49,7 +51,8 @@ public class DataStreaming {
         env.execute("Bitcoin Exchange Streaming");
     }
 
-    private static class AlphaVantageAPI implements SourceFunction<Double> {
+
+    static class AlphaVantageAPI implements SourceFunction<Double> {
         private String apiKey;
         private String apiUrl;
 

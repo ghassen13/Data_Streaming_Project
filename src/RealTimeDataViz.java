@@ -4,38 +4,33 @@ import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Tooltip;
 import javafx.stage.Stage;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.chart.CategoryAxis; // Import CategoryAxis
+import org.apache.flink.streaming.api.datastream.DataStream;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CountDownLatch;
 
 public class RealTimeDataViz extends Application {
 
+    private static final CountDownLatch latch = new CountDownLatch(1);
+
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setTitle("Visualisation des données en temps réel");
+        primaryStage.setTitle("Real-Time Data Visualization");
 
-        // Create Category and Number axes for the chart
-        CategoryAxis xAxis = new CategoryAxis(); // Change to CategoryAxis
+        // Create Number axes for the chart
+        NumberAxis xAxis = new NumberAxis(); // Use NumberAxis for timestamp
         NumberAxis yAxis = new NumberAxis();
-        xAxis.setLabel("Date et Temps");
-        yAxis.setLabel("Taux de Change");
+        xAxis.setLabel("Timestamp");
+        yAxis.setLabel("Exchange Rate");
 
         // Create the chart using the axes
-        LineChart<String, Number> lineChart = new LineChart<>(xAxis, yAxis); // Change to LineChart<String, Number>
-        lineChart.setTitle("Données en temps réel");
+        LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
+        lineChart.setTitle("Real-Time Data");
         lineChart.setCreateSymbols(false); // Disable default symbols
 
         // Create a data series for the chart
-        XYChart.Series<String, Number> series = new XYChart.Series<>(); // Change to XYChart.Series<String, Number>
-        series.setName("Taux de Change");
+        XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        series.setName("Exchange Rate");
 
         // Add the series to the chart
         lineChart.getData().add(series);
@@ -49,28 +44,48 @@ public class RealTimeDataViz extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        // Use Exchange Rate data
-        ExchangeRateAPISource APISource = new ExchangeRateAPISource();
-        ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
-        executorService.scheduleAtFixedRate(() -> {
-            double newValue = APISource.getRealTimeData();
-            long timestamp = System.currentTimeMillis();
+        // Wait for the latch to be counted down
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
-            // Convert timestamp to a readable date format
-            String formattedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
+        // Use Exchange Rate data from Flink job
+        DataStream<Double> resultStream = DataStreaming.resultStream; // Replace with the actual method to get the DataStream
 
-            // Add data to the chart
-            Platform.runLater(() -> {
-                series.getData().add(new XYChart.Data<>(formattedDate, newValue));
+        if (resultStream == null) {
+            System.out.println("resultStream is null. Make sure DataStreaming job is running.");
+        } else {
+            System.out.println("resultStream is not null. Proceeding with chart updates.");
 
-                if (series.getData().size() > 100) {
-                    series.getData().remove(0);
-                }
-            });
-        }, 0, 1, TimeUnit.SECONDS);
+            // Add a sink to update the JavaFX chart
+            resultStream.map(value -> {
+                Platform.runLater(() -> {
+                    series.getData().add(new XYChart.Data<>(System.currentTimeMillis(), value));
+                });
+                return value;
+            }).print(); // Add a print statement for logging (you can remove it in production)
+        }
     }
 
     public static void main(String[] args) {
+        // Launch Flink job first
+        Thread flinkJobThread = new Thread(() -> {
+            try {
+                DataStreaming.main(new String[]{});
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                // Count down the latch when Flink job is ready
+                latch.countDown();
+            }
+        });
+
+        // Start Flink job thread
+        flinkJobThread.start();
+
+        // Launch JavaFX application
         launch(args);
     }
 }
