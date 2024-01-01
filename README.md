@@ -39,4 +39,5 @@ Within each temporal window, the exchange rate data undergoes transformative ope
 This dynamic choreography of sliding windows, embedded within the Flink streaming paradigm, not only showcases the flexibility of our real-time data processing but also lays the foundation for responsive and accurate analytics in the ever-evolving landscape of streaming data. Embrace the power of dynamic windows and let your data dance to the beat of real-time insights!
 
 # Exchange Rates Plotting (Bitcoin to TND)
-![Visualisation](ExchangeRate1.png)
+![Visualisation](ExchangeRateBTC-TND.png)
+![Visualisation](ExchangeRateVTC-TND1.png)
